@@ -70,6 +70,7 @@ License: MIT
 """
 
 import json
+import os
 import threading
 import time
 from typing import Any, Dict, List, Optional, Union, Type
@@ -764,7 +765,14 @@ class OpenAIProvider(BaseProvider):
         super().__init__(**kwargs)
         self.api_key = api_key or config.get_api_key("openai")
         self.model = model
-        self.base_url = base_url  # None → standard OpenAI; set → custom endpoint
+        # None → standard OpenAI; set → custom endpoint. The openai SDK already
+        # honours OPENAI_BASE_URL when the client is built, but the provider
+        # must know about it too: the custom-endpoint code paths (no
+        # ``response_format=json_object``, instructor ``Mode.JSON``) key off
+        # ``self.base_url``, and OpenAI-compatible servers such as LM Studio
+        # reject ``json_object`` outright when the URL only comes from the
+        # environment.
+        self.base_url = base_url or os.environ.get("OPENAI_BASE_URL") or None
         self.client = None
         self._init_client()
 
@@ -2094,6 +2102,7 @@ class ProviderPool:
         never aliased.  Nested dicts and lists are normalised to tuples
         so the resulting string is stable.
         """
+
         def make_hashable(value):
             if isinstance(value, dict):
                 return tuple(sorted((k, make_hashable(v)) for k, v in value.items()))
