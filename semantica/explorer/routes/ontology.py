@@ -659,6 +659,16 @@ def _as_uri_list(value: Any) -> List[str]:
     return [str(value)]
 
 
+
+def _domain_range_names(value: Any) -> List[str]:
+    """Normalise a property's domain/range to a list of non-empty names.
+
+    ``LLMOntologyGenerator`` emits lists; older or hand-built results may use a
+    single string. ``None``/empty entries are dropped.
+    """
+    items = value if isinstance(value, list) else [value]
+    return [str(v).strip() for v in items if v is not None and str(v).strip()]
+
 def _convert_ontology_to_graph(ontology_dict: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Convert OntologyIngestor ontology dict to graph nodes and edges."""
     nodes = []
@@ -1709,9 +1719,11 @@ async def create_ontology(
                         "properties": {"rdfs:label": prop.get("name", "")},
                     })
                     
-                    # Only create domain/range edges if domain/range are specified
-                    domain = prop.get('domain')
-                    if domain and domain.strip():
+                    # Only create domain/range edges if domain/range are specified.
+                    # LLMOntologyGenerator._normalize_output() returns them as
+                    # lists (one property may have several domains/ranges), while
+                    # hand-written results may still carry a single string.
+                    for domain in _domain_range_names(prop.get('domain')):
                         domain_uri = f"{ns}/{domain}"
                         edges.append({
                             "source": prop_uri,
@@ -1720,8 +1732,7 @@ async def create_ontology(
                             "weight": 1.0,
                         })
                     
-                    range_val = prop.get('range')
-                    if range_val and range_val.strip():
+                    for range_val in _domain_range_names(prop.get('range')):
                         range_uri = f"{ns}/{range_val}"
                         edges.append({
                             "source": prop_uri,
@@ -1779,9 +1790,11 @@ async def create_ontology(
                         "properties": {"rdfs:label": prop.get("name", "")},
                     })
                     
-                    # Only create domain/range edges if domain/range are specified
-                    domain = prop.get('domain')
-                    if domain and domain.strip():
+                    # Only create domain/range edges if domain/range are specified.
+                    # LLMOntologyGenerator._normalize_output() returns them as
+                    # lists (one property may have several domains/ranges), while
+                    # hand-written results may still carry a single string.
+                    for domain in _domain_range_names(prop.get('domain')):
                         domain_uri = f"{ns}/{domain}"
                         edges.append({
                             "source": prop_uri,
@@ -1790,8 +1803,7 @@ async def create_ontology(
                             "weight": 1.0,
                         })
                     
-                    range_val = prop.get('range')
-                    if range_val and range_val.strip():
+                    for range_val in _domain_range_names(prop.get('range')):
                         range_uri = f"{ns}/{range_val}"
                         edges.append({
                             "source": prop_uri,
